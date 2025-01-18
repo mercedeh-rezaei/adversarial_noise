@@ -5,6 +5,15 @@ from src.utils import load_image, save_image
 import argparse
 
 def main():
+
+    if torch.cuda.is_avilable():
+        device ="cuda"
+    elif torch.backednds.mps.is_avialable():
+        device ="mps"
+    else:
+        device = "mps"
+    print(f"Using device {device}")
+
     parser = argparse.ArgumentParser(description="Adversarial Noise")
     parser.add_argument("image_path", type=str, help="path to the input image")
     parser.add_argument("target_class", type=int, help="desired target class for tampering with classification")
@@ -13,12 +22,12 @@ def main():
     args = parser.parse_args()
 
 
-    model = resnet18(pretrained=True).eval()
-    input_image = load_image("examples/input.jpg")
+    model = resnet18(pretrained=True).to(device).eval()
+    input_image = load_image(args.imapge_path).to(device)
 
     # TODO: Implement the attack function
-    perturbed_image = fgsm_attack(model, input_image, target_class=0)
-    save_image(perturbed_image, "examples/output.jpg")
+    perturbed_image = fgsm_attack(model, input_image, args.target_class, epsilon=args.epsilon)
+    save_image(perturbed_image, args.output_path)
     print(f"Adversarial image saved to {args.output_path}")
 
 
