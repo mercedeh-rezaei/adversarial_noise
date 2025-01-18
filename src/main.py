@@ -1,5 +1,6 @@
 import torch
 from torchvision.models import resnet18
+from torchvision.models import ResNet18_Weights
 import torchvision
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader
@@ -77,7 +78,7 @@ def main():
 
     output_path = "examples/perturbed_image.jpg"
 
-    model = resnet18(pretrained=True).to(device)
+    model = resnet18(weights=ResNet18_Weights.DEFAULT).to(device)
     model.eval()
     
     # getting the original prediction
@@ -98,9 +99,12 @@ def main():
     with torch.no_grad():
         perturbed_pred = model(perturbed_image)
         _, perturbed_pred_class = torch.max(perturbed_pred, 1)
+        perturbed_pred_class = perturbed_pred_class.item()
         perturbed_pred_class_name = imagenet_classes.get(perturbed_pred_class, 'Unknown')
 
-
+    print("Top 5 predictions (original): ", torch.topk(orig_pred, 5).indices)
+    print("Top 5 predictions (perturbed):", torch.topk(perturbed_pred, 5).indices)
+    
     save_image(perturbed_image, output_path)
     print(f"Adversarial image saved to {output_path}")
 
