@@ -1,6 +1,7 @@
 from PIL import Image
 import torchvision.transforms as transforms
 import torch
+import os
 
 def load_image(image):
     """
@@ -17,6 +18,9 @@ def load_image(image):
 
 def save_image(tensor, output):
     """Saves a tensor as an output"""
+
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    
     unnormalize = transforms.Normalize(
         mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
         std=[1 / 0.229, 1 / 0.224, 1 / 0.225],
