@@ -1,4 +1,4 @@
-# Adversarial Noise Attack
+# Adversarial Noise Project
 
 This project impelements an FGSM adversarial attack on the Resnet18 pre-trained model to misclassify images by adding noise.
 
