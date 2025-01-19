@@ -4,11 +4,12 @@ from torchvision.models import ResNet18_Weights
 import torchvision
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader
-from attack import fgsm_attack
+from fgsm_attack import fgsm_attack
+from pgd_attack import pgd_attack
 from utils import load_image, save_image
 import argparse
 import matplotlib.pyplot as plt
-import os 
+import os
 import urllib
 import json
 from PIL import Image
@@ -20,11 +21,12 @@ def load_imagenet_classes():
         urllib.request.urlretrieve(url, "imagenet_class_index.json")
         with open("imagenet_class_index.json") as f:
             class_idx = json.load(f)
-        return {int(key): value[1] for key,value in class_idx.items()}
+        return {int(key): value[1] for key, value in class_idx.items()}
     except Exception as e:
         print(f"Error loading ImageNet class labels: {e}")
         return {}
-    
+
+
 imagenet_classes = load_imagenet_classes()
 
 
@@ -38,32 +40,34 @@ def download_image(url, filename):
 
 
 def main():
-
     if torch.cuda.is_available():
-        device ="cuda"
+        device = "cuda"
     elif torch.backends.mps.is_available():
-        device ="mps"
+        device = "mps"
     else:
         device = "cpu"
     print(f"Using device {device}")
 
     parser = argparse.ArgumentParser(description="Adversarial Noise")
-    parser.add_argument("target_class", type=int, help="desired target class for tampering with classification")
-    # parser.add_argument("output_path", type=str, default="examples/output.jpg", help="Path to save the perturbed image")
-    parser.add_argument("--epsilon", type=float, default=0.01, help="Perturbation strength")
+    parser.add_argument("target_class", type=int, help="Desired target class for tampering with classification")
+    parser.add_argument("--image_path", type=str, default="dog.jpg", help="Path to the input image (default: dog.jpg)")
+    parser.add_argument("--epsilon", type=float, default=0.005, help="Perturbation strength")
+    parser.add_argument("--num_iterations", type=int, default=40, help="Number of iterations for PGD")
+    parser.add_argument("--step_size", type=float, default=0.005, help="Step size for PGD")
     args = parser.parse_args()
 
-    # show options to choose from
-    print("Here are some of the available ImageNet classes:")
-    for i in range(10):  # only 10 to keep it simple
-        print(f"{i}: {imagenet_classes.get(i, 'Unknown')}")
+    # if the user doesn't include an image, we use the dog image
+    image_path = args.image_path
+    if image_path == "dog.jpg" and not os.path.exists(image_path):
+        print("Downloading default dog image...")
+        url = "https://github.com/pytorch/hub/raw/master/images/dog.jpg"
+        download_image(url, image_path)
 
-    
-    url, filename = ("https://github.com/pytorch/hub/raw/master/images/dog.jpg", "dog.jpg")
-    download_image(url, filename)
+    if not os.path.exists(image_path):
+        print(f"Error: Image file {image_path} not found.")
+        return
 
-    # Load the image
-    image = Image.open(filename).convert('RGB')
+    image = Image.open(image_path).convert('RGB')
 
     preprocess = transforms.Compose([
         transforms.Resize(256),
@@ -74,42 +78,39 @@ def main():
 
     image_tensor = preprocess(image).unsqueeze(0).to(device)
 
+   
     save_image(image_tensor, 'examples/orig_img.jpg')
 
     output_path = "examples/perturbed_image.jpg"
 
     model = resnet18(weights=ResNet18_Weights.DEFAULT).to(device)
     model.eval()
-    
-    # getting the original prediction
+
+    # Getting the original prediction
     with torch.no_grad():
         orig_pred = model(image_tensor)
-        _,orig_pred_class = torch.max(orig_pred, 1)
+        _, orig_pred_class = torch.max(orig_pred, 1)
         orig_pred_class = orig_pred_class.item()
         orig_pred_class_name = imagenet_classes.get(orig_pred_class, 'Unknown')
 
-
+    print(f"Original prediction: {orig_pred_class_name}")
 
     target_class = args.target_class
-    # performing the attack
-    perturbed_image = fgsm_attack(model, image_tensor, target_class, epsilon=args.epsilon)
+    # Performing the attack
+    perturbed_image = pgd_attack(model, image_tensor, target_class, epsilon=args.epsilon,
+                                 num_iterations=args.num_iterations, step_size=args.step_size)
 
+    save_image(perturbed_image, output_path)
+    print(f"Adversarial image saved to {output_path}")
 
-    # getting the prediction after attack
+    # Getting the prediction after the attack
     with torch.no_grad():
         perturbed_pred = model(perturbed_image)
         _, perturbed_pred_class = torch.max(perturbed_pred, 1)
         perturbed_pred_class = perturbed_pred_class.item()
         perturbed_pred_class_name = imagenet_classes.get(perturbed_pred_class, 'Unknown')
 
-    print("Top 5 predictions (original): ", torch.topk(orig_pred, 5).indices)
-    print("Top 5 predictions (perturbed):", torch.topk(perturbed_pred, 5).indices)
-    
-    save_image(perturbed_image, output_path)
-    print(f"Adversarial image saved to {output_path}")
-
-
-    # Visualize the original and adversarial images
+    # Visualise the original and perturbed images
     orig_img = image_tensor.squeeze(0).permute(1, 2, 0).cpu().detach().numpy()
     perturbed_img_np = perturbed_image.squeeze(0).permute(1, 2, 0).cpu().detach().numpy()
 
@@ -126,6 +127,7 @@ def main():
     axes[1].axis('off')
 
     plt.show()
+
 
 if __name__ == "__main__":
     main()

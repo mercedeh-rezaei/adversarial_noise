@@ -29,3 +29,11 @@ def save_image(tensor, output):
     image = unnormalize(image).clamp(0, 1)
     image = transforms.ToPILImage()(image)
     image.save(output)
+
+def denorm(batch, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
+    """
+    Denormalizes a batch of images.
+    """
+    mean = torch.tensor(mean).to(batch.device)
+    std = torch.tensor(std).to(batch.device)
+    return batch * std.view(1, -1, 1, 1) + mean.view(1, -1, 1, 1)
