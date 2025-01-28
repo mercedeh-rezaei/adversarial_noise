@@ -13,3 +13,7 @@ The number of iterations has a default value of 100.
 
 python src/main.py <target_class> <image_path> --epsilon <perturbation_strength> --num_iterations <num_iterations> --step_size <step_size>
 
+# Testing the code
+python test.py <image_path> (default is 50 random target classes)
+python test.py <image_path> --num_classes <num_of_desired_classes_to_test>
+python test_adversarial.py <image_path> --output_dir <output_dir> (specifiying custom output directory to view results)
