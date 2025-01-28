@@ -1,0 +1,7 @@
+{
+    "total_tests": 50,
+    "successful_attacks": 50,
+    "success_rate": 1.0,
+    "avg_perturbation": 0.13392876148223876,
+    "avg_target_prob": 1.0
+}

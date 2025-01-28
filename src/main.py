@@ -54,9 +54,9 @@ def main():
     parser = argparse.ArgumentParser(description="Adversarial Noise")
     parser.add_argument("target_class", type=int, help="desired target class for tampering with classification")
     parser.add_argument("image_path", type=str, help="Path to the input image")
-    parser.add_argument("--epsilon", type=float, default=0.03, help="Perturbation strength")
-    parser.add_argument("--num_iterations", type=int, default=100, help="Number of iterations for PGD")
-    parser.add_argument("--step_size", type=float, default=0.002, help="Step size for PGD")
+    parser.add_argument("--epsilon", type=float, default=0.01, help="Perturbation strength")
+    parser.add_argument("--num_iterations", type=int, default=30, help="Number of iterations for PGD")
+    parser.add_argument("--step_size", type=float, default=0.001, help="Step size for PGD")
     args = parser.parse_args()
 
     # Load the image
@@ -77,6 +77,8 @@ def main():
     save_image(image_tensor, 'examples/orig_img.jpg')
 
     output_path = "examples/perturbed_image.jpg"
+
+    print(f"Target class name: {imagenet_classes.get(10, 'Unknown')}")
 
     model = resnet18(weights=ResNet18_Weights.DEFAULT).to(device)
     # model = resnet50(weights=ResNet50_Weights.DEFAULT).to(device)
@@ -128,7 +130,7 @@ def main():
     orig_img_denorm = orig_img_denorm.squeeze(0)  # This removes the (1, 3, 224, 224) to (3, 224, 224)
     perturbed_img_denorm = perturbed_img_denorm.squeeze(0)  # This removes the (1, 3, 224, 224) to (3, 224, 224)
 
-    # Check the shape of the denormalized images
+    # Check the shape of the denormalised images
     print(f"Shape of original image after denorm: {orig_img_denorm.shape}")
     print(f"Shape of perturbed image after denorm: {perturbed_img_denorm.shape}")
 
